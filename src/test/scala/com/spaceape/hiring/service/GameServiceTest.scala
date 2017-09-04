@@ -1,6 +1,6 @@
 package com.spaceape.hiring.service
 
-import javax.ws.rs.core.Response.Status.{CONFLICT, FORBIDDEN, NOT_FOUND}
+import javax.ws.rs.core.Response.Status.{BAD_REQUEST, CONFLICT, FORBIDDEN, NOT_FOUND}
 
 import com.mongodb.DuplicateKeyException
 import com.spaceape.hiring.NoughtsException
@@ -24,7 +24,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
 
       when(gameRepository.createGame(Game(player1, player2))) thenReturn gameId
 
@@ -34,13 +34,13 @@ class GameServiceTest extends FunSuite with MockitoSugar{
   }
 
 
-  test("testCreateGame must through NoughtsException when another game with same players in progress") {
+  test("testCreateGame must throw NoughtsException when another game with same players in progress") {
     new Context {
 
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
 
       when(gameRepository.createGame(Game(player1, player2))) thenThrow classOf[DuplicateKeyException]
 
@@ -54,13 +54,33 @@ class GameServiceTest extends FunSuite with MockitoSugar{
     }
   }
 
+  test("testCreateGame must throw NoughtsException when both players are same") {
+    new Context {
+
+      val player1 = "1234"
+      val player2 = "1234"
+
+      val gameId = "59ad573877c8946ab2639515"
+
+
+      val exception : NoughtsException = intercept[NoughtsException]{
+        gameService.createGame(player1, player2)
+      }
+
+      verify(gameRepository, times(0)).createGame(Game(player1, player2))
+      assert(exception.code == BAD_REQUEST.getStatusCode)
+      assert(exception.message == "Need two different players to initiate a game")
+
+    }
+  }
+
   test("testGetGame must return game object by id") {
     new Context {
 
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val mockGame = Game(player1, player2)
 
       when(gameRepository.getGame(gameId)) thenReturn Option(mockGame)
@@ -73,7 +93,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
   test("testGetGame must throw NoughtsException when game not found") {
     new Context {
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
 
       when(gameRepository.getGame(gameId)) thenReturn None
 
@@ -88,13 +108,32 @@ class GameServiceTest extends FunSuite with MockitoSugar{
     }
   }
 
+  test("testGetGame must throw NoughtsException when game id not valid") {
+    new Context {
+
+      val gameId = "invalid_format"
+
+
+
+      val exception : NoughtsException = intercept[NoughtsException]{
+        gameService.getGame(gameId)
+      }
+
+      assert(exception.code == BAD_REQUEST.getStatusCode)
+      assert(exception.message == s"$gameId is not a valid game id")
+
+      verify(gameRepository, times(0)).getGame(gameId)
+
+    }
+  }
+
   test("testMakeMove must update the requested cell with player Id") {
     new Context {
 
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player1, 0, 0)
       val cells = List(
         List(Option(player1), None, None),
@@ -119,7 +158,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player1, 0, 2)
       val cells = List(
         List(Option(player1), Option(player1), Option(player1)),
@@ -144,7 +183,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player1, 0, 2)
       val cells = List(
         List(Option(player1), Option(player2), None),
@@ -169,7 +208,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player1, 0, 2)
       val cells = List(
         List(Option(player1), Option(player2), None),
@@ -194,7 +233,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player1, 0, 2)
       val cells = List(
         List(Option(player1), Option(player2), Option(player1)),
@@ -219,7 +258,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
         val player1 = "1234"
         val player2 = "5678"
 
-        val gameId = "ABCD"
+        val gameId = "59ad573877c8946ab2639515"
         val move = Move(player1, 0, 2)
 
         when(gameRepository.updateMove(gameId, move)) thenReturn None
@@ -238,13 +277,35 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       }
     }
 
+  test("testMakeMove must return NoughtsException when game id is not in a valid format") {
+    new Context {
+
+      val player1 = "1234"
+      val player2 = "5678"
+
+      val gameId = "invalid_format"
+      val move = Move(player1, 0, 2)
+
+      val exception: NoughtsException = intercept[NoughtsException] {
+        gameService.makeMove(gameId, move)
+      }
+
+      verify(gameRepository, times(0)).updateMove(gameId, move)
+      verify(gameRepository, times(0)).getGame(gameId)
+      verify(gameRepository, times(0)).completeMove(gameId, None, None, gameOver = true)
+
+      assert(exception.code == BAD_REQUEST.getStatusCode)
+      assert(exception.message == s"$gameId is not a valid game id")
+    }
+  }
+
     test("testMakeMove must return NoughtsException when game is over") {
       new Context {
 
         val player1 = "1234"
         val player2 = "5678"
 
-        val gameId = "ABCD"
+        val gameId = "59ad573877c8946ab2639515"
         val move = Move(player1, 0, 2)
         val cells = List(
           List(Option(player1), Option(player2), None),
@@ -276,7 +337,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player1, 0, 2)
       val cells = List(
         List(Option(player1), Option(player2), None),
@@ -308,7 +369,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player1, 0, 0)
       val cells = List(
         List(Option(player1), Option(player2), None),
@@ -329,7 +390,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       verify(gameRepository, times(0)).completeMove(gameId, None, None, gameOver = true)
 
       assert(exception.code == CONFLICT.getStatusCode)
-      assert(exception.message == "Cell in ABCD at position x = 0 and y = 0 is already filled")
+      assert(exception.message == "Cell in 59ad573877c8946ab2639515 at position x = 0 and y = 0 is already filled")
     }
   }
 
@@ -339,7 +400,7 @@ class GameServiceTest extends FunSuite with MockitoSugar{
       val player1 = "1234"
       val player2 = "5678"
 
-      val gameId = "ABCD"
+      val gameId = "59ad573877c8946ab2639515"
       val move = Move(player2, 0, 2)
       val cells = List(
         List(Option(player1), Option(player2), None),

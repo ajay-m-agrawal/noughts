@@ -1,11 +1,12 @@
 package com.spaceape.hiring.service
 
-import javax.ws.rs.core.Response.Status.{BAD_REQUEST, CONFLICT, FORBIDDEN, NOT_FOUND, INTERNAL_SERVER_ERROR}
+import javax.ws.rs.core.Response.Status._
 
 import com.mongodb.DuplicateKeyException
 import com.spaceape.hiring.NoughtsException
 import com.spaceape.hiring.model.{Game, Move, PlayerScore}
 import com.spaceape.hiring.repository.GameRepository
+import org.bson.types.ObjectId
 
 class GameService(gameRepository: GameRepository) {
   def getLeaderBoard(numberOfLeaders: Int): List[PlayerScore] = {
@@ -14,12 +15,13 @@ class GameService(gameRepository: GameRepository) {
 
 
   def getGame(gameId: String) : Game = {
+    validateGameId(gameId)
     gameRepository.getGame(gameId).getOrElse(throw NoughtsException(NOT_FOUND.getStatusCode, s"$gameId does not exist"))
   }
 
-
   def createGame(player1: String, player2: String): String = {
     try {
+      validatePlayers(player1, player2)
       gameRepository.createGame(Game(player1, player2))
     }
     catch {
@@ -29,7 +31,9 @@ class GameService(gameRepository: GameRepository) {
     }
   }
 
+
   def makeMove(gameId: String, move: Move) {
+    validateGameId(gameId)
     val game = gameRepository.updateMove(gameId, move)
     if(game.isDefined) {
       val winnerId = winner(game.get)
@@ -41,6 +45,21 @@ class GameService(gameRepository: GameRepository) {
   }
 
 
+
+  private def validateGameId(gameId: String)  {
+    try {
+      new ObjectId(gameId)
+    }
+    catch {
+      case ex: IllegalArgumentException =>
+        throw NoughtsException(BAD_REQUEST.getStatusCode, s"$gameId is not a valid game id")
+    }
+  }
+
+  private def validatePlayers(player1: String, player2: String)  {
+      if (player1 == player2)
+        throw NoughtsException(BAD_REQUEST.getStatusCode, "Need two different players to initiate a game")
+  }
 
   private def rejectionException(gameId: String, move: Move) = {
     val gameById = gameRepository.getGame(gameId).getOrElse(throw NoughtsException(NOT_FOUND.getStatusCode, s"$gameId does not exist"))

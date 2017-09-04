@@ -89,9 +89,15 @@ game won and no points for draws.
 Candidate Comments
 ------------------
 
-For now the implementation assumes a 3*3 grid and code is written following the same assumption for the sake of simplicity however the code in GameService could be refactored in future to make the grid size configurable.
-Atomcity of Mongo write operations is used to handle the concurrency
+Application needs mongo db for storing games, URI for the same needs to provided in yml file as gameMongoURI
 gameMongoURI in text.yml can be modified to match the server requirements and deployment architecture, for now it is a simple connection
+For now the implementation assumes a 3*3 grid and code is written following the same assumption for the sake of simplicity however the code in GameService could be refactored in future to make the grid size configurable.
+Atomicity of Mongo write operations and unique indexes are used to handle the concurrency issues
+LeadersResource provides the leaderboard and be accessed using below API, numberOfLeaders is optional and default value is 10
+
+    method                                   : GET
+    url                                      : /leaders/?numberOfLeaders=<top n players required>
+    example response body (top 2 players)    : [{"_id":"1","score":1},{"_id":"2","score":1}]
+    example response body (no winners)       : []
+
 LeadersResource uses the same service and repository as NoughtsResource however we can write respective service and repository class for Leaders resource
-Performance can be tested using JMeter however because of time constraints the JMeter script is not added
-I haven't written Scala code in some time hence there could be some refactoring done for code efficiency
